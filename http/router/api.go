@@ -73,6 +73,12 @@ func ApiInit(g *gin.Engine) {
 		frg.POST("/audit/file", au.AuditFile)
 	}
 
+	{
+		lo := &api.Local{}
+		//[method:GET] [uri:/api/local/status] read-only status for processes on this host
+		frg.GET("/local/status", middleware.LocalOnly(), lo.Status)
+	}
+
 	frg.Use(middleware.RustAuth())
 	{
 		u := &api.User{}
