@@ -1,0 +1,15 @@
+# Builds apimain from this tree and overlays it on the upstream release image, which
+# already carries the matching admin frontend, conf and docs for that version.
+ARG BASE_IMAGE=lejianwen/rustdesk-api:v2.7
+
+FROM golang:1.23-alpine AS builder
+RUN apk add --no-cache gcc musl-dev
+WORKDIR /src
+COPY . .
+# go.sum is gitignored upstream; tidy regenerates it the same way Dockerfile.dev does.
+RUN go mod tidy \
+    && go test ./http/middleware/ \
+    && CGO_ENABLED=1 go build -ldflags "-s -w -extldflags '-static'" -o /out/apimain ./cmd/apimain.go
+
+FROM ${BASE_IMAGE}
+COPY --from=builder /out/apimain /app/apimain
