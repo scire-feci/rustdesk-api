@@ -13,3 +13,15 @@ RUN go mod tidy \
 
 FROM ${BASE_IMAGE}
 COPY --from=builder /out/apimain /app/apimain
+# The admin frontend hardcodes a few Chinese strings outside its translation tables, so
+# they show in every language. Each must be found: a base image that moved them fails the
+# build instead of shipping them untranslated.
+RUN cd /app/resources/admin \
+    && for s in '"多个IP以 | 分割"' '", 全部填 "' '"请选择颜色"'; do \
+        grep -rqF "$s" . || { echo "not found: $s" >&2; exit 1; }; \
+    done \
+    && grep -rlF -e '多个IP以' -e '全部填' -e '请选择颜色' . | xargs sed -i \
+        -e 's#"多个IP以 | 分割"#"Separate multiple IPs with |"#g' \
+        -e 's#", 全部填 "#"To remove all, enter "#g' \
+        -e 's#"请选择颜色"#"Please select a color"#g' \
+    && ! grep -rqF -e '多个IP以' -e '全部填' -e '请选择颜色' .
